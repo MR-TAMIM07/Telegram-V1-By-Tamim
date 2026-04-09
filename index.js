@@ -3,6 +3,7 @@ const express = require("express");
 const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
+const https = require("https");
 const { pipeline } = require("stream");
 const { promisify } = require("util");
 const streamPipeline = promisify(pipeline);
@@ -14,25 +15,15 @@ const PORT = process.env.PORT || 3000;
 const BOT_TOKEN = "8643206314:AAG4W1fqTepqktrE_xzxbn4KI9GY1x1X188";
 const DOWNLOAD_API = "https://xsaim8x-xxx-api.onrender.com/api/auto";
 
-// Webhook mode for Render
-const bot = new TelegramBot(BOT_TOKEN, { webHook: true });
-const WEBHOOK_URL = "https://telegram-v1-by-tamim-d7n6.onrender.com";
+// POLLING MODE - More reliable for Render free tier
+const bot = new TelegramBot(BOT_TOKEN, { polling: true });
+
+console.log("🤖 Bot started in POLLING mode");
 
 // Health check endpoint
 app.get("/", (req, res) => {
   res.send("🤖 ᴛᴀᴍɪᴍ ʙᴏᴛ ɪs ʀᴜɴɴɪɴɢ!");
 });
-
-// Webhook endpoint
-app.post(`/bot${BOT_TOKEN}`, (req, res) => {
-  bot.processUpdate(req.body);
-  res.sendStatus(200);
-});
-
-// Set webhook
-bot.setWebHook(`${WEBHOOK_URL}/bot${BOT_TOKEN}`)
-  .then(() => console.log("✅ Webhook set successfully"))
-  .catch(err => console.error("Webhook error:", err.message));
 
 // Domains for video links
 const DOMAINS = [
@@ -150,7 +141,7 @@ bot.onText(/\/help/, (msg) => {
   💬 ᴄʜᴀᴛ ᴄᴏᴍᴍᴀɴᴅs
   ━━━━━━━━━━━━━━━━━━━
   ◈ /chat <msg> - ᴛᴀʟᴋ ᴛᴏ ᴀɪ
-  ◈ ᴛʀɪɢɢᴇʀs: ʙʙʏ, ʙᴀʙʏ, ᴊᴀɴ
+  ◈ ᴛʀɪɢɢᴇʀs: ʙʙʏ, ʙᴀʙʏ, ᴊᴀɴ, ʙᴏᴛ
 
   ⚙️ ᴏᴛʜᴇʀ ᴄᴏᴍᴍᴀɴᴅs
   ━━━━━━━━━━━━━━━━━━━
@@ -159,7 +150,8 @@ bot.onText(/\/help/, (msg) => {
   ◈ /ping  - ʙᴏᴛ sᴘᴇᴇᴅ
 
   🔗 ᴛ.ᴍᴇ/ɪᴛsᴍᴇᴛᴀᴍɪᴍ404
-╚═════════════════════╝`;
+╚═════════════════════╝
+       ⚡ ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴛᴀᴍɪᴍ`;
 
   bot.sendMessage(msg.chat.id, helpMsg);
 });
@@ -177,7 +169,8 @@ bot.onText(/\/info/, (msg) => {
   ┃  🆔 ᴜsᴇʀ ɪᴅ  : ${userId}
   ┃  🌐 ᴜsᴇʀɴᴀᴍᴇ : ${username}
 
-╚═════════════════════╝`
+╚═════════════════════╝
+       ⚡ ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴛᴀᴍɪᴍ`
   );
 });
 
@@ -192,7 +185,8 @@ bot.onText(/\/ping/, async (msg) => {
   ┃  ⚡ sᴘᴇᴇᴅ  : ${ping}ᴍs
   ┃  ✅ sᴛᴀᴛᴜs : ᴏɴʟɪɴᴇ
 
-╚══════════════════╝`,
+╚══════════════════╝
+       ᴛᴀᴍɪᴍ ʙᴏᴛ`,
     { chat_id: msg.chat.id, message_id: sent.message_id }
   );
 });
@@ -203,11 +197,11 @@ bot.onText(/\/dl (.+)/, async (msg, match) => {
   const chatId = msg.chat.id;
 
   if (!isVideoLink(url)) {
-    return bot.sendMessage(chatId, `❌ ᴜɴsᴜᴘᴘᴏʀᴛᴇᴅ ʟɪɴᴋ!`);
+    return bot.sendMessage(chatId, `❌ ᴜɴsᴜᴘᴘᴏʀᴛᴇᴅ ʟɪɴᴋ!\n\nsᴜᴘᴘᴏʀᴛᴇᴅ: ʏᴏᴜᴛᴜʙᴇ, ғʙ, ᴛɪᴋᴛᴏᴋ, ɪɢ, ᴛᴡɪᴛᴛᴇʀ, sᴘᴏᴛɪғʏ`);
   }
 
   const platform = detectPlatform(url);
-  const loading = await bot.sendMessage(chatId, `♻️ ᴅᴏᴡɴʟᴏᴀᴅɪɴɢ...\nᴘʟᴀᴛғᴏʀᴍ: ${platform}`);
+  const loading = await bot.sendMessage(chatId, `♻️ ᴅᴏᴡɴʟᴏᴀᴅɪɴɢ ғʀᴏᴍ ${platform}...`);
 
   const isAudio = url.includes("spotify") || url.includes("soundcloud");
   const ext = isAudio ? "mp3" : "mp4";
@@ -216,25 +210,27 @@ bot.onText(/\/dl (.+)/, async (msg, match) => {
   try {
     const apiRes = await axios.get(DOWNLOAD_API, {
       params: { url },
-      timeout: 30000
+      timeout: 30000,
+      headers: { "User-Agent": "Mozilla/5.0" }
     });
     const data = apiRes.data;
 
-    const mediaURL = data.high_quality || data.url ||
+    let mediaURL = data.high_quality || data.url ||
       (data.result && data.result.url) ||
       (data.data && data.data.url) ||
       data.media || data.video || data.audio || data.link;
 
     if (!mediaURL) {
       await bot.deleteMessage(chatId, loading.message_id).catch(() => {});
-      return bot.sendMessage(chatId, `⚠️ ᴄᴏᴜʟᴅ ɴᴏᴛ ᴇxᴛʀᴀᴄᴛ ᴜʀʟ!`);
+      return bot.sendMessage(chatId, `⚠️ ᴄᴏᴜʟᴅ ɴᴏᴛ ᴇxᴛʀᴀᴄᴛ ᴠɪᴅᴇᴏ ᴜʀʟ!\nᴛʀʏ ᴀɴᴏᴛʜᴇʀ ʟɪɴᴋ.`);
     }
 
     const fileRes = await axios({
       method: "get",
       url: mediaURL,
       responseType: "stream",
-      timeout: 60000
+      headers: { "User-Agent": "Mozilla/5.0" },
+      timeout: 120000
     });
 
     const writer = fs.createWriteStream(filePath);
@@ -254,7 +250,10 @@ bot.onText(/\/dl (.+)/, async (msg, match) => {
 │ 💾 sɪᴢᴇ     : ${filesize} ᴍʙ
 │ ✅ sᴛᴀᴛᴜs   : sᴜᴄᴄᴇss
 │
-╰─────────────────────╯`;
+│ ✨ ᴇɴᴊᴏʏ ʏᴏᴜʀ ᴍᴇᴅɪᴀ ʙᴀʙʏ 🐥
+│
+╰─────────────────────╯
+♡— ᴛᴀᴍɪᴍ ⸙`;
 
     if (isAudio) {
       await bot.sendAudio(chatId, filePath, { caption });
@@ -267,7 +266,8 @@ bot.onText(/\/dl (.+)/, async (msg, match) => {
   } catch (err) {
     await bot.deleteMessage(chatId, loading.message_id).catch(() => {});
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    bot.sendMessage(chatId, `❌ ᴅᴏᴡɴʟᴏᴀᴅ ғᴀɪʟᴇᴅ!\n${err.message.slice(0, 100)}`);
+    console.error("Download error:", err.message);
+    bot.sendMessage(chatId, `❌ ᴅᴏᴡɴʟᴏᴀᴅ ғᴀɪʟᴇᴅ!\n\`${err.message.slice(0, 100)}\``);
   }
 });
 
@@ -283,7 +283,7 @@ bot.onText(/\/chat (.+)/, async (msg, match) => {
       attachments: []
     }, { timeout: 30000 });
     
-    const reply = res.data?.message || "ᴇʀʀᴏʀ ᴊᴀɴᴜ 🥹";
+    const reply = res.data?.message || "baby i didn't understand 🥹";
     const sent = await bot.sendMessage(chatId, reply, { reply_to_message_id: msg.message_id });
     trackReply(sent.message_id);
   } catch (err) {
@@ -326,13 +326,22 @@ bot.on("message", async (msg) => {
   }
 });
 
+// Error handling
+bot.on("polling_error", (error) => {
+  console.error("Polling error:", error.message);
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log("🤖 ᴛᴀᴍɪᴍ ʙᴏᴛ ɪs ʀᴇᴀᴅʏ!");
+  console.log("🤖 ᴛᴀᴍɪᴍ ʙᴏᴛ ɪs ʀᴇᴀᴅʏ! (POLLING MODE)");
 });
 
-// Self ping every 14 minutes (keep alive)
+// Self ping to keep alive
 setInterval(() => {
-  https.get(WEBHOOK_URL, () => console.log("💓 Keep-alive ping")).on("error", () => {});
-}, 14 * 60 * 1000);
+  https.get(`https://telegram-v1-by-tamim-d7n6.onrender.com`, (res) => {
+    console.log(`💓 Keep-alive ping | Status: ${res.statusCode}`);
+  }).on("error", (err) => {
+    console.log(`⚠️ Ping error: ${err.message}`);
+  });
+}, 14 * 60 * 1000); // Every 14 minutes
