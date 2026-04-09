@@ -1,7 +1,7 @@
 {
-  "name": "tamim-bot",
+  "name": "telegram-v1-by-tamim",
   "version": "2.0.0",
-  "description": "Telegram Media Downloader & Chat Bot",
+  "description": "Telegram Media Downloader & AI Chat Bot",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
@@ -17,5 +17,20 @@
   },
   "engines": {
     "node": ">=18.0.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MR-TAMIM07/Telegram-V1-By-Tamim.git"
+  },
+  "keywords": [
+    "telegram-bot",
+    "media-downloader",
+    "youtube-downloader",
+    "facebook-downloader",
+    "tiktok-downloader",
+    "ai-chatbot",
+    "tamim-bot"
+  ],
+  "author": "TAMIM",
+  "license": "MIT"
 }
